@@ -1,18 +1,31 @@
 defmodule Chimera.Application do
-  # See https://hexdocs.pm/elixir/Application.html
-  # for more information on OTP Applications
   @moduledoc false
 
   use Application
 
-  def start(_type, _args) do
+  alias Chimera.HTTPClient
+  alias Chimera.HTTPClient.RequesterSupervisor
+  alias Chimera.HTTPServer.ResponderSupervisor
+
+  def start(_type, args) do
+    _ =
+      Enum.each(args, fn {app, configs} ->
+        _ =
+          Enum.each(configs, fn {key, value} ->
+            Application.put_env(app, key, value)
+
+            if app == :logger do
+              Logger.configure([{key, value}])
+            end
+          end)
+      end)
+
     children = [
-      # Starts a worker by calling: Chimera.Worker.start_link(arg)
-      # {Chimera.Worker, arg}
+      HTTPClient,
+      RequesterSupervisor,
+      ResponderSupervisor
     ]
 
-    # See https://hexdocs.pm/elixir/Supervisor.html
-    # for other strategies and supported options
     opts = [strategy: :one_for_one, name: Chimera.Supervisor]
     Supervisor.start_link(children, opts)
   end
